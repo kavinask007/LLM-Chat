@@ -59,7 +59,7 @@ export function Chat3() {
           </div>
           <div className="flex items-start gap-4 justify-end">
             <div className="bg-primary p-3 rounded-2xl max-w-[70%] text-primary-foreground dark:bg-primary dark:text-primary-foreground">
-              <p>I'm doing well, thank you for asking! How can I assist you today?</p>
+              <p>I&aposm doing well, thank you for asking! How can I assist you today?</p>
             </div>
             <Avatar className="w-8 h-8 rounded-full">
               <AvatarImage src="/placeholder-user.jpg" />
@@ -78,7 +78,7 @@ export function Chat3() {
           <div className="flex items-start gap-4 justify-end">
             <div className="bg-primary p-3 rounded-2xl max-w-[70%] text-primary-foreground dark:bg-primary dark:text-primary-foreground">
               <p>
-                I'm an advanced language model with a wide range of capabilities. I can assist you with tasks like
+                I&aposm an advanced language model with a wide range of capabilities. I can assist you with tasks like
                 research, analysis, writing, coding, and more. What kind of help do you need?
               </p>
             </div>

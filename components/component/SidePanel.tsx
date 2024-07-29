@@ -3,7 +3,7 @@ import { SetStateAction, useState, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { User } from 'lucide-react';
+
 import {
   Sheet,
   SheetClose,
@@ -49,7 +49,7 @@ export const SheetSide = () => {
           <SheetHeader>
             <SheetTitle>Choose Model</SheetTitle>
             <SheetDescription>
-              Choose the phi model that'll be downloaded for the first time
+              Choose the phi model that&aposll be downloaded for the first time
             </SheetDescription>
           </SheetHeader>
           <div className="grid gap-4 py-4">

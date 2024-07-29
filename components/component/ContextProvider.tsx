@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { createContext, useState, useEffect } from "react";
 
 export interface MyContextData {
@@ -9,11 +9,23 @@ export interface MyContextData {
 const MyContext = createContext<MyContextData | null>(null);
 
 const MyContextProvider = ({ children }: { children: React.ReactNode }) => {
-  const storedData = localStorage.getItem("myContextData");
+  var storedData: string| null = '{}';
+  if (typeof window !== "undefined") {
+    storedData = localStorage.getItem("myContextData");
+  }
+
   const initialState = storedData ? JSON.parse(storedData) : {};
   const [data, setData] = useState(initialState);
+  // useEffect(() => {
+  //   localStorage.setItem("myContextData", JSON.stringify(data));
+  // }, [data]);
   useEffect(() => {
-    localStorage.setItem("myContextData", JSON.stringify(data));
+    localStorage.setItem("myContextData", JSON.stringify(data, (key, value) => {
+      if (typeof value === 'function') {
+        return undefined;
+      }
+      return value;
+    }));
   }, [data]);
   return (
     <MyContext.Provider value={{ data, setData }}>
