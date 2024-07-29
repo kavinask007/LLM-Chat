@@ -75,7 +75,7 @@
     --ring: 240 5% 90%;
     --radius: 0.5rem;
   }
-  .green {
+  .customgreen {
       --background: 20 14.3% 4.1%;
       --foreground: 0 0% 95%;
       --card: 24 9.8% 10%;

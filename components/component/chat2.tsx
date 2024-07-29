@@ -1,12 +1,79 @@
 "use client";
-import { useState, useEffect, SetStateAction, JSX, SVGProps } from "react";
+import {
+  useState,
+  useEffect,
+  SetStateAction,
+  JSX,
+  SVGProps,
+  useContext,
+  useRef,
+} from "react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
-import { DrawerDemo } from "@/components/component/drawer";
-import { getChatStream } from "@/components/Services/Groq";
+// import { getChatStream } from "@/components/Services/Groq";
 import { ModeToggle } from "@/components/component/theme";
 import { SheetSide } from "@/components/component/SidePanel";
+import {
+  MyContext,
+  MyContextData,
+} from "@/components/component/ContextProvider";
+import { CircleStop, User } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
+import AudioRecorder from "@/components/component/AudioRecordingComponent";
+const model: any = {
+  phi_1_5_q4k: {
+    base_url: "https://huggingface.co/lmz/candle-quantized-phi/resolve/main/",
+    model: "model-q4k.gguf",
+    tokenizer: "tokenizer.json",
+    config: "phi-1_5.json",
+    quantized: true,
+    seq_len: 2048,
+    size: "800 MB",
+  },
+  phi_1_5_q80: {
+    base_url: "https://huggingface.co/lmz/candle-quantized-phi/resolve/main/",
+    model: "model-q80.gguf",
+    tokenizer: "tokenizer.json",
+    config: "phi-1_5.json",
+    quantized: true,
+    seq_len: 2048,
+    size: "1.51 GB",
+  },
+  phi_2_0_q4k: {
+    base_url: "https://huggingface.co/radames/phi-2-quantized/resolve/main/",
+    model: [
+      "model-v2-q4k.gguf_aa.part",
+      "model-v2-q4k.gguf_ab.part",
+      "model-v2-q4k.gguf_ac.part",
+    ],
+    tokenizer: "tokenizer.json",
+    config: "config.json",
+    quantized: true,
+    seq_len: 2048,
+    size: "1.57GB",
+  },
+  puffin_phi_v2_q4k: {
+    base_url: "https://huggingface.co/lmz/candle-quantized-phi/resolve/main/",
+    model: "model-puffin-phi-v2-q4k.gguf",
+    tokenizer: "tokenizer-puffin-phi-v2.json",
+    config: "puffin-phi-v2.json",
+    quantized: true,
+    seq_len: 2048,
+    size: "798 MB",
+  },
+  puffin_phi_v2_q80: {
+    base_url: "https://huggingface.co/lmz/candle-quantized-phi/resolve/main/",
+    model: "model-puffin-phi-v2-q80.gguf",
+    tokenizer: "tokenizer-puffin-phi-v2.json",
+    config: "puffin-phi-v2.json",
+    quantized: true,
+    seq_len: 2048,
+    size: "1.50 GB",
+  },
+};
+
 interface Message {
   id: number;
   sender: string;
@@ -19,6 +86,84 @@ export function Chat2() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isInputDisabled, setIsInputDisabled] = useState(false);
+  const { data, setData } = useContext(MyContext) as MyContextData;
+  // const recorderControls = useAudioRecorder()
+  const { toast } = useToast();
+  const workerRef = useRef<Worker>();
+  const WhisperWorkerRef = useRef<Worker>();
+  useEffect(() => {
+    workerRef.current = new Worker("./phiWorker.js", {
+      type: "module",
+    });
+    WhisperWorkerRef.current = new Worker("./whisperWorker.js", {
+      type: "module",
+    });
+    WhisperWorkerRef.current.onmessage = (event: { data: any }) => {
+      console.log(event);
+    };
+    workerRef.current.onmessage = (event: { data: any }) => {
+      toast({ title: event.data.message, description: "model" });
+
+      if (event.data.message == "complete") {
+        setIsInputDisabled(false);
+      }
+      if (event.data.message == "Generating token") {
+        let msg = event.data.sentence;
+        setMessages((prevMessages) => {
+          const lastMessage = prevMessages[prevMessages.length - 1];
+          const updatedMessage = {
+            ...lastMessage,
+            text: msg,
+            isTyping: false,
+          };
+          return [...prevMessages.slice(0, -1), updatedMessage];
+        });
+      }
+    };
+    workerRef.current.onerror = (error: any) => {
+      console.error("Worker error:", error);
+    };
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+    };
+  }, []);
+
+  const handleAbort = () => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ command: "abort" });
+      setIsInputDisabled(false);
+    }
+  };
+  const startWorker = (prompt: string) => {
+    prompt =
+      " You're a Helfull AI assistant.\n USER: " + prompt + "\n Assistant:";
+    if (workerRef.current) {
+      const model_data = model[data.model_id];
+      const weightsURL = model_data.base_url + model_data.model;
+      const tokenizerURL = model_data.base_url + model_data.tokenizer;
+      const configURL = model_data.base_url + model_data.config;
+      const model_id = data.model_id;
+      const repeat_penalty = data.repeat_penalty;
+      const max_seq_length = data.max_seq_len;
+      const top_p = data.top_p;
+      workerRef.current.postMessage({
+        weightsURL,
+        modelID: model_id,
+        tokenizerURL,
+        configURL,
+        quantized: model_data.quantized,
+        prompt,
+        temp: data.Temperature,
+        top_p: top_p,
+        repeatPenalty: repeat_penalty,
+        seed: data.seed,
+        maxSeqLen: max_seq_length,
+        command: "start",
+      });
+    }
+  };
 
   const handleMicClick = () => {
     setIsRecording(!isRecording);
@@ -31,59 +176,91 @@ export function Chat2() {
     setInputValue(e.target.value);
   };
 
-  const handleSendMessage = async () => {
-    if (inputValue.trim() !== "") {
-      const newMessage: Message = {
-        id: messages.length + 1,
-        sender: "user",
-        text: inputValue,
-        isTyping: false,
-      };
-      const responseMessage = {
-        id: messages.length + 2,
-        sender: "ai",
-        text: "",
-        isTyping: true,
-      };
-      setMessages((prevMessages) => [...prevMessages, newMessage,responseMessage]);
-      setInputValue("");
-      setIsInputDisabled(true);
-      const stream = await getChatStream(inputValue);
-      for await (const chunk of stream) {
-        setMessages((prevMessages) => {
-          const lastMessage = prevMessages[prevMessages.length - 1];
-            const updatedMessage = {
-              ...lastMessage,
-              text: chunk || "",
-              isTyping: false,
-            };
-            return [...prevMessages.slice(0, -1), updatedMessage];
-   
-        })
+  const addAudioElement = (blob: Blob | MediaSource) => {
+    const url = URL.createObjectURL(blob);
+    // const audio = document.createElement("audio");
+    // audio.src = url;
+    // audio.controls = true;
+    // document.body.appendChild(audio);
+    console.log(url);
 
+    var obj = {
+      weightsURL:
+        "https://huggingface.co/openai/whisper-tiny.en/resolve/main/model.safetensors",
+      modelID: "tiny_en",
+      tokenizerURL:
+        "https://huggingface.co/openai/whisper-tiny.en/resolve/main/tokenizer.json",
+      configURL:
+        "https://huggingface.co/openai/whisper-tiny.en/resolve/main/config.json",
+      mel_filtersURL: "mel_filters.safetensors",
+      audioURL: url,
+    };
+    if (WhisperWorkerRef.current) {
+      WhisperWorkerRef.current.postMessage(obj);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    try {
+      if (inputValue.trim() !== "") {
+        const newMessage: Message = {
+          id: messages.length + 1,
+          sender: "user",
+          text: inputValue,
+          isTyping: false,
+        };
+        const responseMessage = {
+          id: messages.length + 2,
+          sender: "ai",
+          text: "",
+          isTyping: true,
+        };
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          newMessage,
+          responseMessage,
+        ]);
+        setInputValue("");
+        setIsInputDisabled(true);
+        // const stream = await getChatStream(inputValue);
+        // for await (const chunk of stream) {
+        //   setMessages((prevMessages) => {
+        //     const lastMessage = prevMessages[prevMessages.length - 1];
+        //     const updatedMessage = {
+        //       ...lastMessage,
+        //       text: chunk || "",
+        //       isTyping: false,
+        //     };
+        //     return [...prevMessages.slice(0, -1), updatedMessage];
+        //   });
+        // }
+        startWorker(inputValue);
       }
+    } catch (e) {
+      setMessages((prevMessages) => {
+        const lastMessage = prevMessages[prevMessages.length - 1];
+        const updatedMessage = {
+          ...lastMessage,
+          text: "" + e,
+          isTyping: false,
+        };
+        return [...prevMessages.slice(0, -1), updatedMessage];
+      });
       setIsInputDisabled(false);
     }
   };
 
   return (
     <div className="flex flex-col h-screen ">
-      <header className="text-muted-foreground p-4 shadow-md ">
+      <header className="text-muted-foreground p-4 ">
         <div className="container mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-full lg:hidden"
-            >
-              <BeefIcon className="w-5 h-5" />
-              <span >Toggle menu</span>
-            </Button>
+          <div className="flex items-center justify-center gap-2">
             <Avatar className="w-8 h-8 rounded-full hidden lg:flex">
-              <AvatarImage src="/placeholder-user.jpg" />
-              <AvatarFallback>AI</AvatarFallback>
+              <SheetSide />
             </Avatar>
-            <h1 className="text-lg font-semibold">AI Chat</h1>
+            <h1 className="text-lg px-4 font-semibold text-primary">
+              Local Chat
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -91,7 +268,7 @@ export function Chat2() {
               size="icon"
               className="rounded-full lg:hidden"
             >
-              <MenuIcon className="w-5 h-5" />
+              <SheetSide />
               <span className="sr-only">Toggle menu</span>
             </Button>
             <ModeToggle />
@@ -103,20 +280,18 @@ export function Chat2() {
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex items-start gap-4 ${
+              className={`flex items-start gap-4 max-w-300 whitespace-normal break-words ${
                 message.sender === "user" ? "justify-end" : ""
               }`}
             >
-              <Avatar
-                className={`w-8 h-8 rounded-full ${
-                  message.sender === "user" ? "order-2" : ""
-                }`}
-              >
-                <AvatarImage src="/placeholder-user.jpg" />
-                <AvatarFallback>
-                  {message.sender.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              {message.sender === "user" ? (
+                <User className={`primary order-2`} />
+              ) : (
+                <Avatar>
+                  {" "}
+                  <AvatarImage src="/placeholder-user.jpg" />
+                </Avatar>
+              )}
               <div
                 className={`p-3 rounded-2xl max-w-[70%] ${
                   message.sender === "user"
@@ -126,10 +301,10 @@ export function Chat2() {
               >
                 {message.text}
                 {message.isTyping && (
-                  <div className="flex items-center gap-1 mt-2 text-primary-foreground">
-                    <div className="w-2 h-2 rounded-full bg-current animate-pulse-dots" />
-                    <div className="w-2 h-2 rounded-full bg-current animate-pulse-dots delay-100" />
-                    <div className="w-2 h-2 rounded-full bg-current animate-pulse-dots delay-200" />
+                  <div className="flex-col items-center justify-center text-primary-foreground ">
+                    <Skeleton className="h-4 w-[350px]" />
+                    <Skeleton className="h-4 w-[250px] mt-1" />
+                    <Skeleton className="h-4 w-[150px] mt-1" />
                   </div>
                 )}
               </div>
@@ -138,6 +313,26 @@ export function Chat2() {
         </div>
       </main>
       <footer className="bg-background p-4 shadow-md ">
+        <AudioRecorder
+          onRecordingComplete={addAudioElement}
+          // recorderControls={recorderControls}
+          audioTrackConstraints={{
+            noiseSuppression: true,
+            echoCancellation: true,
+            sampleRate: 1600,
+          }}
+          showVisualizer={false}
+          downloadOnSavePress={false}
+          downloadFileExtension="wav"
+          classes={{
+            AudioRecorderClass:"bg-primary primary",
+            AudioRecorderStartSaveClass: "rounded",
+            AudioRecorderStatusClass:"hidden",
+            AudioRecorderPauseResumeClass:"hidden",
+            // AudioRecorderDiscardClass:"hidden",
+            AudioRecorderTimerClass:"hidden"
+          }}
+        />
         <div className="container mx-auto flex items-center gap-2">
           <Button
             variant={isRecording ? "default" : "ghost"}
@@ -156,16 +351,6 @@ export function Chat2() {
                   : "text-muted-foreground"
               }`}
             />
-            <div
-              className={`flex items-center gap-1 text-primary-foreground absolute bottom-0 -translate-y-full ${
-                isRecording ? "flex" : "hidden"
-              }`}
-            >
-              <div className="w-2 h-2 rounded-full bg-current animate-pulse-dots" />
-              <div className="w-2 h-2 rounded-full bg-current animate-pulse-dots delay-100" />
-              <div className="w-2 h-2 rounded-full bg-current animate-pulse-dots delay-200" />
-            </div>
-            <span className="sr-only">Record</span>
           </Button>
           <Textarea
             placeholder="Type your message..."
@@ -173,67 +358,33 @@ export function Chat2() {
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === "Enter" && !e.shiftKey) {
                 handleSendMessage();
               }
             }}
             disabled={isInputDisabled}
           />
-          <Button
-            className="rounded-full bg-primary text-primary-foreground"
-            onClick={handleSendMessage}
-            disabled={isInputDisabled}
-          >
-            <SendIcon className="w-5 h-5 bg-primary text-primary-foreground" />
-            <span className="sr-only">Send</span>
-  
-          </Button>
-          <SheetSide/>
+          {!isInputDisabled ? (
+            <Button
+              className="rounded-full bg-primary text-primary-foreground "
+              onClick={handleSendMessage}
+              disabled={isInputDisabled}
+            >
+              <SendIcon className="w-5 h-5  text-primary-foreground" />
+              <span className="sr-only">Send</span>
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              className="rounded-full animate-pulse bg-primary text-primary-foreground"
+              onClick={handleAbort}
+            >
+              <CircleStop className="primary" />
+            </Button>
+          )}
         </div>
       </footer>
     </div>
-  );
-}
-
-function BeefIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12.5" cy="8.5" r="2.5" />
-      <path d="M12.5 2a6.5 6.5 0 0 0-6.22 4.6c-1.1 3.13-.78 3.9-3.18 6.08A3 3 0 0 0 5 18c4 0 8.4-1.8 11.4-4.3A6.5 6.5 0 0 0 12.5 2Z" />
-      <path d="m18.5 6 2.19 4.5a6.48 6.48 0 0 1 .31 2 6.49 6.49 0 0 1-2.6 5.2C15.4 20.2 11 22 7 22a3 3 0 0 1-2.68-1.66L2.4 16.5" />
-    </svg>
-  );
-}
-
-function MenuIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <line x1="4" x2="20" y1="12" y2="12" />
-      <line x1="4" x2="20" y1="6" y2="6" />
-      <line x1="4" x2="20" y1="18" y2="18" />
-    </svg>
   );
 }
 
