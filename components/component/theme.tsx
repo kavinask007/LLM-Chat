@@ -1,7 +1,6 @@
 "use client";
-
 import * as React from "react";
-import { Moon, Sun, LeafyGreen ,SunMoon } from "lucide-react";
+import { Moon, Sun, LeafyGreen, SunMoon } from "lucide-react";
 import { useTheme } from "next-themes";
 
 import { Button } from "@/components/ui/button";
@@ -14,28 +13,28 @@ import {
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme();
-  const getThemeIcon = (theme: string | undefined) => {
-    if (theme === undefined) return <></>;
-    switch (theme) {
-      case "light":
-        return <Sun />;
-      case "dark":
-        return (
-          <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-        );
-      case "customgreen":
-        return <LeafyGreen />;
-      case "system":
-        return < SunMoon></SunMoon>
-      default:
-        return <></>;
-    }
-  };
+  // const getThemeIcon = (theme: string | undefined) => {
+  //   if (theme === undefined) return <Sun />;
+  //   switch (theme) {
+  //     case "light":
+  //       return <Sun  />;
+  //     case "dark":
+  //       return <SunMoon />;
+  //     case "customgreen":
+  //       return <LeafyGreen />;
+  //     case "system":
+  //       return <SunMoon />;
+  //     default:
+  //       return <Sun />;
+  //   }
+  // };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button  size="icon" className="bg-primary">
-          {getThemeIcon(theme)}
+        <Button size="icon" className="bg-primary rounded-full">
+          {/* {getThemeIcon(theme)}
+           */}
+          <Sun />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

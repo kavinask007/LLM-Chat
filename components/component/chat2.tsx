@@ -8,12 +8,16 @@ import {
   useContext,
   useRef,
 } from "react";
+import * as marked from "marked";
+import { Progress } from "@/components/ui/progress";
+import { useRecordVoice } from "@/components/component/attempt";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 // import { getChatStream } from "@/components/Services/Groq";
 import { ModeToggle } from "@/components/component/theme";
 import { SheetSide } from "@/components/component/SidePanel";
+import { getChatStream } from "@/components/Services/Groq";
 import {
   MyContext,
   MyContextData,
@@ -21,7 +25,8 @@ import {
 import { CircleStop, User } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import AudioRecorder from "@/components/component/AudioRecordingComponent";
+import { toast } from "sonner";
+
 const model: any = {
   phi_1_5_q4k: {
     base_url: "https://huggingface.co/lmz/candle-quantized-phi/resolve/main/",
@@ -82,13 +87,69 @@ interface Message {
 }
 
 export function Chat2() {
-  const [isRecording, setIsRecording] = useState(false);
+  // const [isRecording, setIsRecording] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isInputDisabled, setIsInputDisabled] = useState(false);
   const { data, setData } = useContext(MyContext) as MyContextData;
-  // const recorderControls = useAudioRecorder()
-  const { toast } = useToast();
+  const [url, setUrl] = useState(null);
+  const { recording, startRecording, stopRecording } = useRecordVoice(setUrl);
+  const [messagesContainerRef, setMessagesContainerRef] = useState(null);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: "message",
+      title: "New Message",
+      message: "You have a new message from John Doe",
+      timestamp: "2 minutes ago",
+      read: true,
+    },
+    {
+      id: 2,
+      type: "order",
+      title: "Order Shipped",
+      message: "Your order #12345 has been shipped",
+      timestamp: "1 hour ago",
+      progress: 50,
+      read: true,
+    },
+    {
+      id: 3,
+      type: "system",
+      title: "System Update",
+      message: "A new system update is available",
+      timestamp: "1 day ago",
+      read: true,
+    },
+  ]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const pushNoti = () => {
+    setNotifications((prev) => {
+      return [
+        ...prev,
+        {
+          id: prev.length + 1,
+          type: "message",
+          title: "New Message",
+          message: "You have a new message from John Doe",
+          timestamp: "2 minutes ago",
+          read: false,
+        },
+      ];
+    });
+  };
+  const handleNotificationClick = (id: number) => {
+    setNotifications((prevNotifications) =>
+      prevNotifications.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification
+      )
+    );
+  };
+  const handleNotificationsToggle = () => {
+    setIsNotificationsOpen((prevState) => !prevState);
+  };
+  // const { toast } = useToast();
+
   const workerRef = useRef<Worker>();
   const WhisperWorkerRef = useRef<Worker>();
   useEffect(() => {
@@ -99,11 +160,17 @@ export function Chat2() {
       type: "module",
     });
     WhisperWorkerRef.current.onmessage = (event: { data: any }) => {
-      console.log(event);
+      // toast({
+      //   title: "Whisper-Model",
+      //   description: event.data.message,
+      //   action: <></>,
+      // });
+      toast(`Whisper`, {
+        description: event.data.message,
+      });
     };
     workerRef.current.onmessage = (event: { data: any }) => {
-      toast({ title: event.data.message, description: "model" });
-
+      console.log;
       if (event.data.message == "complete") {
         setIsInputDisabled(false);
       }
@@ -117,6 +184,19 @@ export function Chat2() {
             isTyping: false,
           };
           return [...prevMessages.slice(0, -1), updatedMessage];
+        });
+      } else {
+        // toast({
+        //   title: `Model - ${data.model_id}`,
+        //   description: event.data.message,
+        //   action: <></>,
+        // });
+        toast(`Model - ${data.model_id}`, {
+          description: event.data.message,
+          // action: {
+          //   label: "Undo",
+          //   onClick: () => console.log("Undo"),
+          // },
         });
       }
     };
@@ -164,10 +244,20 @@ export function Chat2() {
       });
     }
   };
-
+  useEffect(() => {
+    console.log(url);
+    if (url != null) {
+      addAudioElement(url);
+    }
+  }, [url]);
   const handleMicClick = () => {
-    setIsRecording(!isRecording);
-    setIsInputDisabled(!isRecording);
+    if (recording) {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+    // setIsRecording(!isRecording);
+    setIsInputDisabled(!recording);
   };
 
   const handleInputChange = (e: {
@@ -176,14 +266,7 @@ export function Chat2() {
     setInputValue(e.target.value);
   };
 
-  const addAudioElement = (blob: Blob | MediaSource) => {
-    const url = URL.createObjectURL(blob);
-    // const audio = document.createElement("audio");
-    // audio.src = url;
-    // audio.controls = true;
-    // document.body.appendChild(audio);
-    console.log(url);
-
+  const addAudioElement = (url: string) => {
     var obj = {
       weightsURL:
         "https://huggingface.co/openai/whisper-tiny.en/resolve/main/model.safetensors",
@@ -222,26 +305,39 @@ export function Chat2() {
         ]);
         setInputValue("");
         setIsInputDisabled(true);
-        // const stream = await getChatStream(inputValue);
-        // for await (const chunk of stream) {
-        //   setMessages((prevMessages) => {
-        //     const lastMessage = prevMessages[prevMessages.length - 1];
-        //     const updatedMessage = {
-        //       ...lastMessage,
-        //       text: chunk || "",
-        //       isTyping: false,
-        //     };
-        //     return [...prevMessages.slice(0, -1), updatedMessage];
-        //   });
-        // }
-        startWorker(inputValue);
+        if (data.model_provider == "groq") {
+          const stream = await getChatStream(
+            inputValue,
+            data.groq_access_token,
+            data.groq_model
+          );
+          for await (const chunk of stream) {
+            setMessages((prevMessages) => {
+              const lastMessage = prevMessages[prevMessages.length - 1];
+              const updatedMessage = {
+                ...lastMessage,
+                text: chunk || "",
+                isTyping: false,
+              };
+              return [...prevMessages.slice(0, -1), updatedMessage];
+            });
+            setIsInputDisabled(false);
+          }
+        } else {
+          startWorker(inputValue);
+        }
       }
     } catch (e) {
+      if (e) {
+        toast(`LLM Call`, {
+          description: e.toString(),
+        });
+      }
       setMessages((prevMessages) => {
         const lastMessage = prevMessages[prevMessages.length - 1];
         const updatedMessage = {
           ...lastMessage,
-          text: "" + e,
+          text: "OOPS",
           isTyping: false,
         };
         return [...prevMessages.slice(0, -1), updatedMessage];
@@ -263,6 +359,13 @@ export function Chat2() {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full relative"
+              onClick={handleNotificationsToggle}
+            ></Button>
+
             <Button
               variant="ghost"
               size="icon"
@@ -293,13 +396,23 @@ export function Chat2() {
                 </Avatar>
               )}
               <div
-                className={`p-3 rounded-2xl max-w-[70%] ${
+                className={`p-3 rounded-2xl max-w-[70%] overflow-x ${
                   message.sender === "user"
                     ? "bg-primary text-primary-foreground "
                     : "bg-card "
                 }`}
               >
-                {message.text}
+              
+              {message.text}
+              {/* {isInputDisabled ? (
+                  <>{message.text} </>
+                ) : (
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: marked.parse(message.text),
+                    }}
+                  />
+                )} */}
                 {message.isTyping && (
                   <div className="flex-col items-center justify-center text-primary-foreground ">
                     <Skeleton className="h-4 w-[350px]" />
@@ -313,32 +426,12 @@ export function Chat2() {
         </div>
       </main>
       <footer className="bg-background p-4 shadow-md ">
-        <AudioRecorder
-          onRecordingComplete={addAudioElement}
-          // recorderControls={recorderControls}
-          audioTrackConstraints={{
-            noiseSuppression: true,
-            echoCancellation: true,
-            sampleRate: 1600,
-          }}
-          showVisualizer={false}
-          downloadOnSavePress={false}
-          downloadFileExtension="wav"
-          classes={{
-            AudioRecorderClass:"bg-primary primary",
-            AudioRecorderStartSaveClass: "rounded",
-            AudioRecorderStatusClass:"hidden",
-            AudioRecorderPauseResumeClass:"hidden",
-            // AudioRecorderDiscardClass:"hidden",
-            AudioRecorderTimerClass:"hidden"
-          }}
-        />
         <div className="container mx-auto flex items-center gap-2">
           <Button
-            variant={isRecording ? "default" : "ghost"}
+            variant={recording ? "default" : "ghost"}
             size="icon"
             className={`rounded-full ${
-              isRecording
+              recording
                 ? "animate-pulse bg-primary text-primary-foreground"
                 : ""
             }`}
@@ -346,12 +439,11 @@ export function Chat2() {
           >
             <MicIcon
               className={`w-5 h-5 ${
-                isRecording
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground"
+                recording ? "text-primary-foreground" : "text-muted-foreground"
               }`}
             />
           </Button>
+          {url && <audio src={url} controls></audio>}
           <Textarea
             placeholder="Type your message..."
             className="flex-1 rounded-2xl p-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none border-none"
@@ -445,6 +537,25 @@ function XIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
     >
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+function BellIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </svg>
   );
 }

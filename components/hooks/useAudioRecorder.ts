@@ -9,6 +9,7 @@ export interface recorderControls {
   isPaused: boolean;
   recordingTime: number;
   mediaRecorder?: MediaRecorder;
+  isRecoringAvailable: boolean;
 }
 
 export type MediaAudioTrackConstraints = Pick<
@@ -38,10 +39,11 @@ export type MediaAudioTrackConstraints = Pick<
  * @details `recordingTime`: Number of seconds that the recording has gone on. This is updated every second
  * @details `mediaRecorder`: The current mediaRecorder in use
  */
-const useAudioRecorder: (
+const   useAudioRecorder: (
   audioTrackConstraints?: MediaAudioTrackConstraints,
   onNotAllowedOrFound?: (exception: DOMException) => any,
-  mediaRecorderOptions?: MediaRecorderOptions
+  mediaRecorderOptions?: MediaRecorderOptions,
+  onRecordingAvailable?: (blob: Blob) => void
 ) => recorderControls = (
   audioTrackConstraints,
   onNotAllowedOrFound,
@@ -53,7 +55,7 @@ const useAudioRecorder: (
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder>();
   const [timerInterval, setTimerInterval] = useState<NodeJS.Timer>();
   const [recordingBlob, setRecordingBlob] = useState<Blob>();
-
+  const [isRecoringAvailable,setisRecordingAvailable] = useState(false); //
   const _startTimer: () => void = useCallback(() => {
     const interval = setInterval(() => {
       setRecordingTime((time) => time + 1);
@@ -83,9 +85,11 @@ const useAudioRecorder: (
         setMediaRecorder(recorder);
         recorder.start();
         _startTimer();
-
+          console.log("recoring started")
         recorder.addEventListener("dataavailable", (event) => {
           setRecordingBlob(event.data);
+          console.log(event)
+          setisRecordingAvailable(true);
           recorder.stream.getTracks().forEach((t) => t.stop());
           setMediaRecorder(undefined);
         });
@@ -102,6 +106,7 @@ const useAudioRecorder: (
     setRecordingBlob,
     onNotAllowedOrFound,
     mediaRecorderOptions,
+
   ]);
 
   /**
@@ -145,6 +150,7 @@ const useAudioRecorder: (
     isPaused,
     recordingTime,
     mediaRecorder,
+    isRecoringAvailable
   };
 };
 

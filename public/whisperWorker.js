@@ -1,5 +1,50 @@
 //load the candle Whisper decoder wasm module
-import init, { Decoder } from "./build/m.js";
+import init, { Decoder } from "./whishper-build/build/m.js";
+
+async function fetchWithProgress(url, onProgress) {
+
+  const response = await fetch(url, { cache: "force-cache" });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const contentLength = response.headers.get('content-length');
+  if (!contentLength) {
+    throw new Error('Content-Length response header unavailable');
+  }
+
+  const total = parseInt(contentLength, 10);
+  let loaded = 0;
+
+  const reader = response.body.getReader();
+  const stream = new ReadableStream({
+    start(controller) {
+      function read() {
+        reader.read().then(({ done, value }) => {
+          if (done) {
+            controller.close();
+            return;
+          }
+          loaded += value.length;
+          onProgress(loaded / total);
+          controller.enqueue(value);
+          read();
+        }).catch(error => {
+          console.error('Read error', error);
+          controller.error(error);
+        });
+      }
+      read();
+    }
+  });
+
+  const newResponse = new Response(stream, {
+    headers: response.headers
+  });
+
+  return newResponse;
+}
 async function fetchArrayBuffer(url) {
   const cacheName = "whisper-candle-cache";
   const cache = await caches.open(cacheName);
@@ -8,7 +53,9 @@ async function fetchArrayBuffer(url) {
     const data = await cachedResponse.arrayBuffer();
     return new Uint8Array(data);
   }
-  const res = await fetch(url, { cache: "force-cache" });
+  self.postMessage({ status: "loading", message: `Downloading ${url}` })
+  // const res = await fetchWithProgress(url, progress => self.postMessage({ status: "loading", message: `Progress: ${(progress * 100).toFixed(2)}%` }));
+  const res = await fetchWithProgress(url, progress => { });
   // cache.put(url, res.clone());
   return new Uint8Array(await res.arrayBuffer());
 }

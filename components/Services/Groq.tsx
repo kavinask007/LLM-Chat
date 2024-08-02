@@ -2,9 +2,14 @@ import { ChatGroq } from "@langchain/groq";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 
-export async function getChatStream(input: string): Promise<AsyncGenerator<string>> {
+export async function getChatStream(
+  input: string,
+  api_key: string,
+  modelname:string
+): Promise<AsyncGenerator<string>> {
   const model = new ChatGroq({
-    apiKey: "***",
+    apiKey: api_key,
+    model: modelname
   });
 
   const prompt = ChatPromptTemplate.fromMessages([
@@ -29,4 +34,3 @@ export async function getChatStream(input: string): Promise<AsyncGenerator<strin
 
   return streamGenerator();
 }
-

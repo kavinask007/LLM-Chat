@@ -1,6 +1,6 @@
-function exportWAV(buffer, rate, type) {
-    var downsampledBuffer = downsampleBuffer(buffer, rate);
-    var dataview = encodeWAV(rate, downsampledBuffer);
+export function exportWAV(buffer, rate, type) {
+    // var downsampledBuffer = downsampleBuffer(buffer, rate);
+    var dataview = encodeWAV(rate, buffer);
     var audioBlob = new Blob([dataview], {
       type: type
     });
@@ -54,33 +54,65 @@ function exportWAV(buffer, rate, type) {
   
     return view;
   }
-  function downsampleBuffer(buffer, rate,) {
-    var sampleRate = recorder.context.sampleRate;
-    console.log(sampleRate)
-    if (rate == sampleRate) {
-      return buffer;
-    }
-    if (rate > sampleRate) {
-      throw "downsampling rate show be smaller than original sample rate";
-    }
-    var sampleRateRatio = sampleRate / rate;
-    var newLength = Math.round(buffer.length / sampleRateRatio);
-    var result = new Float32Array(newLength);
-    var offsetResult = 0;
-    var offsetBuffer = 0;
-    while (offsetResult < result.length) {
-      var nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
-      // Use average value of skipped samples
-      var accum = 0, count = 0;
-      for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
-        accum += buffer[i];
-        count++;
-      }
-      result[offsetResult] = accum / count;
-      // Or you can simply get rid of the skipped samples:
-      // result[offsetResult] = buffer[nextOffsetBuffer];
-      offsetResult++;
-      offsetBuffer = nextOffsetBuffer;
-    }
-    return result;
-  }
+  // function downsampleBuffer(buffer, rate,) {
+  //   var sampleRate = recorder.context.sampleRate;
+  //   console.log(sampleRate)
+  //   if (rate == sampleRate) {
+  //     return buffer;
+  //   }
+  //   if (rate > sampleRate) {
+  //     throw "downsampling rate show be smaller than original sample rate";
+  //   }
+  //   var sampleRateRatio = sampleRate / rate;
+  //   var newLength = Math.round(buffer.length / sampleRateRatio);
+  //   var result = new Float32Array(newLength);
+  //   var offsetResult = 0;
+  //   var offsetBuffer = 0;
+  //   while (offsetResult < result.length) {
+  //     var nextOffsetBuffer = Math.round((offsetResult + 1) * sampleRateRatio);
+  //     // Use average value of skipped samples
+  //     var accum = 0, count = 0;
+  //     for (var i = offsetBuffer; i < nextOffsetBuffer && i < buffer.length; i++) {
+  //       accum += buffer[i];
+  //       count++;
+  //     }
+  //     result[offsetResult] = accum / count;
+  //     // Or you can simply get rid of the skipped samples:
+  //     // result[offsetResult] = buffer[nextOffsetBuffer];
+  //     offsetResult++;
+  //     offsetBuffer = nextOffsetBuffer;
+  //   }
+  //   return result;
+  // }
+
+//   const pageload=()=>{
+//     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {}
+//     else{console.log("no media devices")}
+//     navigator.mediaDevices.getUserMedia(media.gUM).then(_stream => {
+//     stream = _stream;
+  
+//     start.removeAttribute('disabled');
+//     //     recorder = new RecordRTC(mediaStream, {
+//     //     type: 'audio',
+//     //     recorderType: RecordRTC.StereoAudioRecorder, // force for all browsers
+//     //     numberOfAudioChannels: 2
+//     // });
+//     var AudioContext = window.AudioContext || window.webkitAudioContext;
+//     var audioContext = new AudioContext;
+//     let input = audioContext.createMediaStreamSource(stream);
+//     /* Create the Recorder object and configure to record mono sound (1 channel) Recording 2 channels will double the file size */
+//     const recorder = new (window as any).Recorder(input, {
+    //numChannels: 1,
+  //})
+//     // recorder = new MediaRecorder(stream,{mimeType:"audio/webm"});
+//     recorder.ondataavailable = e => {
+//       chunks.push(e.data);
+  
+//     };
+//     // recorder.onstop = function() {
+//     //   rec.exportWAV(createDownloadLink);
+//     //   makeLink();
+//     // }
+//   }).catch("test");
+//   };
+// recorder.getBuffer(async (e) => await createDownloadLink(exportWAV(e[0], 16000, "audio/wav")));

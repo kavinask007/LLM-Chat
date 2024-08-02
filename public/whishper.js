@@ -211,7 +211,7 @@ start.onclick = async (e) => {
   if (start.classList.contains("fa-fade")) {
     start.classList.remove("fa-fade");
     recorder.stop();
-    await recorder.getBuffer(async (e) => await createDownloadLink(exportWAV(e[0], 16000, "audio/wav"))); 1
+    await recorder.getBuffer(async (e) => await createDownloadLink(exportWAV(e[0], 16000, "audio/wav"))); 
 
   } else {
     start.classList.add("fa-fade");
@@ -231,15 +231,11 @@ start.onclick = async (e) => {
 // start.removeAttribute('disabled');
 // }
 function exportWAV(buffer, rate, type) {
-  // var bufferL = mergeBuffers(recBuffersL, recLength);
-  // var bufferR = mergeBuffers(recBuffersR, recLength);
-  // var interleaved = interleave(bufferL, bufferR);
   var downsampledBuffer = downsampleBuffer(buffer, rate);
   var dataview = encodeWAV(rate, downsampledBuffer);
   var audioBlob = new Blob([dataview], {
     type: type
   });
-
   return audioBlob;
 
 }
