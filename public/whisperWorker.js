@@ -56,7 +56,7 @@ async function fetchArrayBuffer(url) {
   self.postMessage({ status: "loading", message: `Downloading ${url}` })
   // const res = await fetchWithProgress(url, progress => self.postMessage({ status: "loading", message: `Progress: ${(progress * 100).toFixed(2)}%` }));
   const res = await fetchWithProgress(url, progress => { });
-  // cache.put(url, res.clone());
+  cache.put(url, res.clone());
   return new Uint8Array(await res.arrayBuffer());
 }
 class Whisper {

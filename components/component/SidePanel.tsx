@@ -169,18 +169,32 @@ const LocalModelSettings = () => {
           </SelectContent>
         </Select>
       </div>
-      <Label className="">Temperature : {data.Temperature}</Label>
+      <Label className="">Temperature</Label>
+      {/* <Input
+        type="number"
+        value={data.Temperature}
+        max={1}
+        min={0}
+        step={0.01}
+        className="bg-primary"
+        onChange={(e) => {
+          setData((previous: any) => ({
+            ...previous,
+            Temperature: e.target.value,
+          }));
+        }}
+      /> */}
       <Slider
         defaultValue={[data.Temperature]}
         max={1}
         min={0}
         step={0.01}
-        onValueChange={(value) =>
+        onValueChange={(value) =>{
           setData((previous: any) => ({
             ...previous,
             Temperature: value[0],
           }))
-        }
+        }}
       />
       <Label className="">top_p : {data.top_p}</Label>
       <Slider

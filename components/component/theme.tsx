@@ -54,7 +54,7 @@ export function ModeToggle() {
           className="cursor-pointer"
           onClick={() => setTheme("customgreen")}
         >
-          Green
+          Purple
         </DropdownMenuItem>
         <DropdownMenuItem
           className="cursor-pointer"

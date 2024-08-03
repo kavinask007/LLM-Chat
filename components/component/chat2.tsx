@@ -94,60 +94,8 @@ export function Chat2() {
   const { data, setData } = useContext(MyContext) as MyContextData;
   const [url, setUrl] = useState(null);
   const { recording, startRecording, stopRecording } = useRecordVoice(setUrl);
-  const [messagesContainerRef, setMessagesContainerRef] = useState(null);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "message",
-      title: "New Message",
-      message: "You have a new message from John Doe",
-      timestamp: "2 minutes ago",
-      read: true,
-    },
-    {
-      id: 2,
-      type: "order",
-      title: "Order Shipped",
-      message: "Your order #12345 has been shipped",
-      timestamp: "1 hour ago",
-      progress: 50,
-      read: true,
-    },
-    {
-      id: 3,
-      type: "system",
-      title: "System Update",
-      message: "A new system update is available",
-      timestamp: "1 day ago",
-      read: true,
-    },
-  ]);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const pushNoti = () => {
-    setNotifications((prev) => {
-      return [
-        ...prev,
-        {
-          id: prev.length + 1,
-          type: "message",
-          title: "New Message",
-          message: "You have a new message from John Doe",
-          timestamp: "2 minutes ago",
-          read: false,
-        },
-      ];
-    });
-  };
-  const handleNotificationClick = (id: number) => {
-    setNotifications((prevNotifications) =>
-      prevNotifications.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
-  };
-  const handleNotificationsToggle = () => {
-    setIsNotificationsOpen((prevState) => !prevState);
-  };
+  const [isAudioProcessing, setIsAudioprocessing] = useState(false);
+
   // const { toast } = useToast();
 
   const workerRef = useRef<Worker>();
@@ -165,9 +113,28 @@ export function Chat2() {
       //   description: event.data.message,
       //   action: <></>,
       // });
+      console.log(event);
       toast(`Whisper`, {
         description: event.data.message,
-      });
+
+      },);
+
+      toast(`<Progress>`, {
+        description: event.data.message,
+
+      },);
+      if (event.data.message == "complete") {
+        let fullText = "";
+
+        event.data.output?.forEach((segment: { dr: { text: string } }) => {
+          if (segment.dr && segment.dr.text) {
+            let cleanedText = segment.dr.text.replace(/<\|.*?\|>/g, "").trim();
+            fullText += cleanedText + " ";
+          }
+        });
+        setInputValue(fullText);
+        setIsAudioprocessing(false);
+      }
     };
     workerRef.current.onmessage = (event: { data: any }) => {
       console.log;
@@ -253,6 +220,7 @@ export function Chat2() {
   const handleMicClick = () => {
     if (recording) {
       stopRecording();
+      setIsAudioprocessing(true);
     } else {
       startRecording();
     }
@@ -281,6 +249,9 @@ export function Chat2() {
     if (WhisperWorkerRef.current) {
       WhisperWorkerRef.current.postMessage(obj);
     }
+  };
+  const handleAudioProcessingCancel = () => {
+    setIsAudioprocessing(false); //IsAudioprocessing(false); //IsAudioprocessing(false);
   };
 
   const handleSendMessage = async () => {
@@ -362,13 +333,6 @@ export function Chat2() {
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full relative"
-              onClick={handleNotificationsToggle}
-            ></Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
               className="rounded-full lg:hidden"
             >
               <SheetSide />
@@ -402,9 +366,8 @@ export function Chat2() {
                     : "bg-card "
                 }`}
               >
-              
-              {message.text}
-              {/* {isInputDisabled ? (
+                {message.text}
+                {/* {isInputDisabled ? (
                   <>{message.text} </>
                 ) : (
                   <span
@@ -427,23 +390,33 @@ export function Chat2() {
       </main>
       <footer className="bg-background p-4 shadow-md ">
         <div className="container mx-auto flex items-center gap-2">
-          <Button
-            variant={recording ? "default" : "ghost"}
-            size="icon"
-            className={`rounded-full ${
-              recording
-                ? "animate-pulse bg-primary text-primary-foreground"
-                : ""
-            }`}
-            onClick={handleMicClick}
-          >
-            <MicIcon
-              className={`w-5 h-5 ${
-                recording ? "text-primary-foreground" : "text-muted-foreground"
+          {isAudioProcessing ? (
+            <Button
+              className="animate-pulse bg-destructive rounded-full"
+              onClick={handleAudioProcessingCancel}
+            >
+              <CrossIcon />
+            </Button>
+          ) : (
+            <Button
+              variant={recording ? "default" : "ghost"}
+              size="icon"
+              className={`rounded-full ${
+                recording
+                  ? "animate-pulse bg-primary text-primary-foreground"
+                  : ""
               }`}
-            />
-          </Button>
-          {url && <audio src={url} controls></audio>}
+              onClick={handleMicClick}
+            >
+              <MicIcon
+                className={`w-5 h-5 ${
+                  recording
+                    ? "text-primary-foreground"
+                    : "text-muted-foreground"
+                }`}
+              />
+            </Button>
+          )}
           <Textarea
             placeholder="Type your message..."
             className="flex-1 rounded-2xl p-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none border-none"
@@ -456,23 +429,27 @@ export function Chat2() {
             }}
             disabled={isInputDisabled}
           />
-          {!isInputDisabled ? (
-            <Button
-              className="rounded-full bg-primary text-primary-foreground "
-              onClick={handleSendMessage}
-              disabled={isInputDisabled}
-            >
-              <SendIcon className="w-5 h-5  text-primary-foreground" />
-              <span className="sr-only">Send</span>
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              className="rounded-full animate-pulse bg-primary text-primary-foreground"
-              onClick={handleAbort}
-            >
-              <CircleStop className="primary" />
-            </Button>
+          {!isAudioProcessing && (
+            <>
+              {!isInputDisabled ? (
+                <Button
+                  className="rounded-full bg-primary text-primary-foreground "
+                  onClick={handleSendMessage}
+                  disabled={isInputDisabled}
+                >
+                  <SendIcon className="w-5 h-5  text-primary-foreground" />
+                  <span className="sr-only">Send</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="rounded-full animate-pulse bg-primary text-primary-foreground"
+                  onClick={handleAbort}
+                >
+                  <CircleStop className="primary" />
+                </Button>
+              )}
+            </>
           )}
         </div>
       </footer>
@@ -540,22 +517,23 @@ function XIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
-function BellIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
+function CrossIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
   return (
     <svg
-      {...props}
       xmlns="http://www.w3.org/2000/svg"
       width="24"
       height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      className="lucide lucide-circle-x"
     >
-      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      <circle cx="12" cy="12" r="10" />
+      <path d="m15 9-6 6" />
+      <path d="m9 9 6 6" />
     </svg>
   );
 }

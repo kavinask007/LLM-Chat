@@ -6,21 +6,20 @@ export const useRecordVoice = (onRecordingFinished) => {
     const [audioContext, setAudioContext] = useState(null);
     // State to track whether recording is currently in progress
     const [recording, setRecording] = useState(false);
-
-
+    const [stream_, setStream] = useState(null)
     // Function to start the recording
     const startRecording = () => {
         if (typeof window !== "undefined") {
             navigator.mediaDevices
                 .getUserMedia({ audio: true })
                 .then(initialMediaRecorder);
-        }   
-        console.log(mediaRecorder)
-        if (mediaRecorder) {
-            mediaRecorder.clear();
-            mediaRecorder.record();
-            setRecording(true);
         }
+        // console.log(mediaRecorder)
+        // if (mediaRecorder) {
+        //     mediaRecorder.clear();
+        //     mediaRecorder.record();
+        //     setRecording(true);
+        // }
     };
 
     // Function to stop the recording
@@ -34,17 +33,19 @@ export const useRecordVoice = (onRecordingFinished) => {
                 onRecordingFinished(url);
                 // Call the callback with the URL
                 setRecording(false)
-                if (audioContext){
+                if (audioContext) {
                     audioContext.close()
                 }
             })
+            stream_.getTracks().forEach(track => track.stop());
             ;
-        // mediaRecorder.destroy();
+            // mediaRecorder.destroy();
         }
     };
 
     // Function to initialize the media recorder with the provided stream
     const initialMediaRecorder = (stream) => {
+        setStream(stream);
         var audioContext = window.AudioContext || window.webkitAudioContext;
         var audioContext = new AudioContext;
         let input = audioContext.createMediaStreamSource(stream)
@@ -53,17 +54,16 @@ export const useRecordVoice = (onRecordingFinished) => {
         var recorder = new window.Recorder(input, {
             numChannels: 1,
         });
-
+        recorder.clear()
+        recorder.record();
         recorder.ondataavailable = (e) => {
             console.log("data available");
             chunks.current.push(e.data);
         };
 
         setMediaRecorder(recorder);
+        setRecording(true);
     };
-
-
-
     return {
         recording, startRecording, stopRecording
     };
