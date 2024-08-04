@@ -116,10 +116,8 @@ export function Chat2() {
       console.log(event);
       toast(`Whisper`, {
         description: event.data.message,
+      });
 
-      },);
-
-  
       if (event.data.message == "complete") {
         let fullText = "";
 
@@ -298,7 +296,9 @@ export function Chat2() {
     } catch (e) {
       if (e) {
         toast(`LLM Call`, {
-          description: "Error : Make sure a Model is selected with all parameters"+e.toString(),
+          description:
+            "Error : Make sure a Model is selected with all parameters" +
+            e.toString(),
         });
       }
       setMessages((prevMessages) => {
@@ -375,9 +375,9 @@ export function Chat2() {
                 )} */}
                 {message.isTyping && (
                   <div className="flex-col items-center justify-center text-primary-foreground ">
-                    <Skeleton className="h-4 w-[350px]" />
-                    <Skeleton className="h-4 w-[250px] mt-1" />
-                    <Skeleton className="h-4 w-[150px] mt-1" />
+                    <Skeleton className="h-4 w-[30vw]" />
+                    <Skeleton className="h-4 w-[25vw] mt-1" />
+                    <Skeleton className="h-4 w-[15vw] mt-1" />
                   </div>
                 )}
               </div>
