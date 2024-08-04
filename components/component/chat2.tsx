@@ -119,10 +119,7 @@ export function Chat2() {
 
       },);
 
-      toast(`<Progress>`, {
-        description: event.data.message,
-
-      },);
+  
       if (event.data.message == "complete") {
         let fullText = "";
 
@@ -301,7 +298,7 @@ export function Chat2() {
     } catch (e) {
       if (e) {
         toast(`LLM Call`, {
-          description: e.toString(),
+          description: "Error : Make sure a Model is selected with all parameters"+e.toString(),
         });
       }
       setMessages((prevMessages) => {
