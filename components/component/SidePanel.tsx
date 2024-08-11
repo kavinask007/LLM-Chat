@@ -98,7 +98,7 @@ const GroqSettings = () => {
       <div className="grid grid-cols-4 items-center gap-4">
         <Label htmlFor="accessToken">Access Token</Label>
         <Input
-          className="w-[150px]"
+          className="w-[150px] bg-secondary"
           id="accessToken"
           type="password"
           placeholder="sk-xxxxxxxxxxxxxxxxxx"

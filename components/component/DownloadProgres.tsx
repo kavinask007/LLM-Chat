@@ -35,7 +35,7 @@ export function DownloadProgressNotification({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <ScrollArea className="h-60">
+        <ScrollArea className="h-3/4">
           <AnimatePresence>
             {progress.map((item) => (
               <motion.div
