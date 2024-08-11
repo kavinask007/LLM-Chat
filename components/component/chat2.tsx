@@ -9,7 +9,14 @@ import {
   useRef,
 } from "react";
 import { Bell } from "lucide-react";
-
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
+import { ScrollArea } from "@/components/ui/scroll-area";
 import * as marked from "marked";
 import { Progress } from "@/components/ui/progress";
 import { useRecordVoice } from "@/components/component/attempt";
@@ -409,7 +416,8 @@ export function Chat2() {
           </div>
         </div>
       </header>
-      <main className="flex-1 overflow-auto p-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent ">
+      
+      <ScrollArea className="flex-1 overflow-auto p-4 ">
         <DownloadProgressNotification
           progress={progress}
           showdownloads={showdownloads}
@@ -459,7 +467,7 @@ export function Chat2() {
             </div>
           ))}
         </div>
-      </main>
+      </ScrollArea>
       <footer className="bg-background p-4 shadow-md ">
         <div className="container mx-auto flex items-center gap-2">
           {isAudioProcessing ? (
