@@ -53,7 +53,7 @@ export const SheetSide = () => {
             </SheetDescription>
           </SheetHeader>
           <div className="grid gap-4 ">
-            <Label className="">Model Provider : </Label>
+            <Label className="">Provider : </Label>
             <Select
               value={data.model_provider}
               onValueChange={(value) =>
@@ -112,7 +112,7 @@ const GroqSettings = () => {
         />
       </div>
       <div>
-        <Label className="">Model : </Label>
+        <Label className="">Model</Label>
         <Select
           value={data.groq_model}
           onValueChange={(value) =>
@@ -143,14 +143,14 @@ const LocalModelSettings = () => {
   return (
     <>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label className="">Model : </Label>
+        <Label className="">Model</Label>
         <Select
           value={data.model_id}
           onValueChange={(value) =>
             setData((previous: any) => ({ ...previous, model_id: value }))
           }
         >
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="Select Model" />
           </SelectTrigger>
           <SelectContent>
@@ -169,7 +169,7 @@ const LocalModelSettings = () => {
           </SelectContent>
         </Select>
       </div>
-      <Label className="">Temperature</Label>
+      <Label className="">Temperature : {data.Temperature}</Label>
       {/* <Input
         type="number"
         value={data.Temperature}

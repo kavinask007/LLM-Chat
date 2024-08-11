@@ -8,6 +8,8 @@ import {
   useContext,
   useRef,
 } from "react";
+import { Bell } from "lucide-react";
+
 import * as marked from "marked";
 import { Progress } from "@/components/ui/progress";
 import { useRecordVoice } from "@/components/component/attempt";
@@ -18,12 +20,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { ModeToggle } from "@/components/component/theme";
 import { SheetSide } from "@/components/component/SidePanel";
 import { getChatStream } from "@/components/Services/Groq";
+import { DownloadProgressNotification } from "@/components/component/DownloadProgres";
 import {
   MyContext,
   MyContextData,
 } from "@/components/component/ContextProvider";
 import { CircleStop, User } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
@@ -85,7 +87,10 @@ interface Message {
   text: string;
   isTyping: boolean;
 }
-
+interface ProgressData {
+  url: string;
+  progress: number;
+}
 export function Chat2() {
   // const [isRecording, setIsRecording] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -95,9 +100,9 @@ export function Chat2() {
   const [url, setUrl] = useState(null);
   const { recording, startRecording, stopRecording } = useRecordVoice(setUrl);
   const [isAudioProcessing, setIsAudioprocessing] = useState(false);
-
+  const [progress, setProgress] = useState<ProgressData[]>([]);
+  const [showdownloads, setShowdownloads] = useState(false);
   // const { toast } = useToast();
-
   const workerRef = useRef<Worker>();
   const WhisperWorkerRef = useRef<Worker>();
   useEffect(() => {
@@ -113,26 +118,57 @@ export function Chat2() {
       //   description: event.data.message,
       //   action: <></>,
       // });
-      console.log(event);
-      toast(`Whisper`, {
-        description: event.data.message,
-      });
 
-      if (event.data.message == "complete") {
-        let fullText = "";
+      if (event.data.message == "progress") {
+        setProgress((previous) => {
+          if (previous.length == 0) {
+            setShowdownloads(true);
+          }
+          const index = previous.findIndex(
+            (item) => item.url === event.data.url
+          );
 
-        event.data.output?.forEach((segment: { dr: { text: string } }) => {
-          if (segment.dr && segment.dr.text) {
-            let cleanedText = segment.dr.text.replace(/<\|.*?\|>/g, "").trim();
-            fullText += cleanedText + " ";
+          if (index !== -1) {
+            // Update the existing item
+            const updatedProgress = [...previous];
+            updatedProgress[index].progress = parseFloat(
+              event.data.progres_data
+            );
+            return updatedProgress;
+          } else {
+            // Add a new item
+            return [
+              ...previous,
+              {
+                url: event.data.url,
+                progress: parseFloat(event.data.progres_data),
+              },
+            ];
           }
         });
-        setInputValue(fullText);
-        setIsAudioprocessing(false);
+      } else {
+        // console.log(event);
+        toast(`Whisper`, {
+          description: event.data.message,
+        });
+
+        if (event.data.message == "complete") {
+          let fullText = "";
+
+          event.data.output?.forEach((segment: { dr: { text: string } }) => {
+            if (segment.dr && segment.dr.text) {
+              let cleanedText = segment.dr.text
+                .replace(/<\|.*?\|>/g, "")
+                .trim();
+              fullText += cleanedText + " ";
+            }
+          });
+          setInputValue(fullText);
+          setIsAudioprocessing(false);
+        }
       }
     };
     workerRef.current.onmessage = (event: { data: any }) => {
-      console.log;
       if (event.data.message == "complete") {
         setIsInputDisabled(false);
       }
@@ -146,6 +182,33 @@ export function Chat2() {
             isTyping: false,
           };
           return [...prevMessages.slice(0, -1), updatedMessage];
+        });
+      } else if (event.data.message == "progress") {
+        setProgress((previous) => {
+          if (previous.length == 0) {
+            setShowdownloads(true);
+          }
+          const index = previous.findIndex(
+            (item) => item.url === event.data.url
+          );
+
+          if (index !== -1) {
+            // Update the existing item
+            const updatedProgress = [...previous];
+            updatedProgress[index].progress = parseFloat(
+              event.data.progres_data
+            );
+            return updatedProgress;
+          } else {
+            // Add a new item
+            return [
+              ...previous,
+              {
+                url: event.data.url,
+                progress: parseFloat(event.data.progres_data),
+              },
+            ];
+          }
         });
       } else {
         // toast({
@@ -335,11 +398,23 @@ export function Chat2() {
               <SheetSide />
               <span className="sr-only">Toggle menu</span>
             </Button>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setShowdownloads((previous) => !previous)}
+            >
+              <Bell  />
+            </Button>
             <ModeToggle />
           </div>
         </div>
       </header>
       <main className="flex-1 overflow-auto p-4 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent ">
+        <DownloadProgressNotification
+          progress={progress}
+          showdownloads={showdownloads}
+          setDownloads={setShowdownloads}
+        />
         <div className="container mx-auto max-w-2xl space-y-4">
           {messages.map((message) => (
             <div

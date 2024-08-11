@@ -52,8 +52,8 @@ async function fetchArrayBuffer(url) {
     return new Uint8Array(data);
   }
   self.postMessage({ status: "loading", message: `Downloading ${url}` })
-  // const res = await fetchWithProgress(url, progress => self.postMessage({ status: "loading", message: `Progress: ${(progress * 100).toFixed(2)}%` }));
-  const res = await fetchWithProgress(url, progress => {});
+  const res = await fetchWithProgress(url, progress => self.postMessage({ status: "loading", message: "progress", url: url, progres_data: `${(progress * 100).toFixed(2)}` }));
+  // const res = await fetchWithProgress(url, progress => {});
   cache.put(url, res.clone());
   return new Uint8Array(await res.arrayBuffer());
 }
