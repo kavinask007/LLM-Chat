@@ -15,7 +15,8 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "@/components/ui/carousel"
+} from "@/components/ui/carousel";
+import { Plus, MessageCircleX } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import * as marked from "marked";
 import { Progress } from "@/components/ui/progress";
@@ -120,12 +121,6 @@ export function Chat2() {
       type: "module",
     });
     WhisperWorkerRef.current.onmessage = (event: { data: any }) => {
-      // toast({
-      //   title: "Whisper-Model",
-      //   description: event.data.message,
-      //   action: <></>,
-      // });
-
       if (event.data.message == "progress") {
         setProgress((previous) => {
           if (previous.length == 0) {
@@ -344,6 +339,7 @@ export function Chat2() {
         if (data.model_provider == "groq") {
           const stream = await getChatStream(
             inputValue,
+            messages,
             data.groq_access_token,
             data.groq_model
           );
@@ -407,22 +403,23 @@ export function Chat2() {
             </Button>
             <Button
               variant="outline"
-              className="rounded-full"
+              className="rounded-full w-12 h-12"
               onClick={() => setShowdownloads((previous) => !previous)}
             >
-              <Bell  />
+              <Bell />
             </Button>
             <ModeToggle />
           </div>
         </div>
       </header>
-      
+
       <ScrollArea className="flex-1 overflow-auto p-4 ">
         <DownloadProgressNotification
           progress={progress}
           showdownloads={showdownloads}
           setDownloads={setShowdownloads}
         />
+
         <div className="container mx-auto max-w-2xl space-y-4">
           {messages.map((message) => (
             <div
@@ -446,8 +443,8 @@ export function Chat2() {
                     : "bg-card "
                 }`}
               >
-                {message.text}
-                {/* {isInputDisabled ? (
+                {/* {message.text} */}
+                {isInputDisabled ? (
                   <>{message.text} </>
                 ) : (
                   <span
@@ -455,7 +452,7 @@ export function Chat2() {
                       __html: marked.parse(message.text),
                     }}
                   />
-                )} */}
+                )}
                 {message.isTyping && (
                   <div className="flex-col items-center justify-center text-primary-foreground ">
                     <Skeleton className="h-4 w-[30vw]" />
@@ -497,6 +494,13 @@ export function Chat2() {
               />
             </Button>
           )}
+          <Button
+            className="rounded-full"
+            variant="outline"
+            onClick={() => setMessages((previous) => [])}
+          >
+            <MessageCircleX />
+          </Button>
           <Textarea
             placeholder="Type your message..."
             className="flex-1 rounded-2xl p-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary resize-none border-none"
@@ -617,3 +621,4 @@ function CrossIcon(props: JSX.IntrinsicAttributes & SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
